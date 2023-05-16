@@ -1,5 +1,7 @@
 a drop-in replacement of `vim.ui.{input,select}`
 
+https://user-images.githubusercontent.com/6236829/238661875-d5beeca6-fe16-44aa-9f8c-dcf4923d5235.mp4
+
 ## features
 * use floating windows rather than `:input`
 
