@@ -10,31 +10,28 @@
 --* dont reset window options and buffer lines initiatively
 
 local api = vim.api
-local jelly = require("infra.jellyfish")("display_menu", vim.log.levels.DEBUG)
+local jelly = require("infra.jellyfish")("tui.menu")
 local fn = require("infra.fn")
 
 local Keys = {}
 do
   local list = {}
+  local dict = {}
   do
-    local str = "asdfjkl" .. "qwertyuiop" .. "zxcvbnm"
+    local str = "asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm"
     for i = 1, #str do
-      table.insert(list, string.sub(str, i, i))
+      local char = string.sub(str, i, i)
+      list[i] = char
+      dict[char] = i
     end
+    assert(not fn.contains(list, "q"), "q is reserved for quit")
   end
 
-  function Keys.as_choice(key)
-    for k, v in pairs(list) do
-      if v == key then return k end
-    end
-  end
-
-  function Keys.iter()
-    return fn.iterate(list)
-  end
+  function Keys.index(key) return dict[key] end
+  function Keys.iter() return fn.iterate(list) end
 end
 
-local state = { bufnr = nil, win_id = nil, using = false, entries = nil, choice = nil }
+local state = { bufnr = nil, winid = nil, using = false, entries = nil, choice = nil }
 do
   ---@return number
   function state:prepare_buffer()
@@ -49,21 +46,19 @@ do
         noremap = true,
         nowait = true,
         callback = function()
-          local n = assert(Keys.as_choice(key), "unreachable: invalid key")
+          local n = assert(Keys.index(key), "unreachable: invalid key")
           -- not a present entry, do nothing
           if n > #self.entries then return end
           state.choice = n
-          api.nvim_win_close(state.win_id, false)
+          api.nvim_win_close(state.winid, false)
         end,
       })
     end
 
-    for _, key in pairs({ "<esc>", "<c-[>", "<c-]>" }) do
+    for key in fn.iterate({ "q", "<esc>", "<c-[>", "<c-]>" }) do
       api.nvim_buf_set_keymap(state.bufnr, "n", key, "", {
         noremap = true,
-        callback = function()
-          api.nvim_win_close(state.win_id, false)
-        end,
+        callback = function() api.nvim_win_close(state.winid, false) end,
       })
     end
 
@@ -71,7 +66,7 @@ do
   end
 
   function state:cleanup()
-    state.win_id = nil
+    state.winid = nil
     state.using = false
     state.entries = nil
     state.choice = nil
@@ -95,7 +90,7 @@ return function(entries, opts, callback)
   local has_prompt = prompt ~= nil
 
   if state.using then return jelly.err("a menu is just displaying, complete it to continue!") end
-  assert(state.win_id == nil and state.choice == nil, "unreachable: dirty state")
+  assert(state.winid == nil and state.choice == nil, "unreachable: dirty state")
   state.using = true
 
   state:prepare_buffer()
@@ -107,7 +102,7 @@ return function(entries, opts, callback)
     local lines = {}
     local line_max = 0
     local key_iter = Keys.iter()
-    for _, ent in pairs(state.entries) do
+    for ent in fn.iterate(state.entries) do
       local key = assert(key_iter(), "no more lhs is available")
       local line = string.format(" %s. %s", key, formatter(ent))
       table.insert(lines, line)
@@ -124,19 +119,17 @@ return function(entries, opts, callback)
 
   do
     -- stylua: ignore
-    state.win_id = api.nvim_open_win(state.bufnr, true, {
+    state.winid = api.nvim_open_win(state.bufnr, true, {
       relative = "cursor", row = 1, col = 0, width = win_width, height = win_height,
       style = "minimal",
     })
-    api.nvim_win_set_option(state.win_id, "winbar", prompt or "")
+    api.nvim_win_set_option(state.winid, "winbar", prompt or "")
 
     api.nvim_create_autocmd("winleave", {
       buffer = state.bufnr,
       once = true,
       nested = true, -- so that we can trigger the winclosed event
-      callback = function()
-        api.nvim_win_close(state.win_id, false)
-      end,
+      callback = function() api.nvim_win_close(state.winid, false) end,
     })
 
     api.nvim_create_autocmd("winclosed", {
