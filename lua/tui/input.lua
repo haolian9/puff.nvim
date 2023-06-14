@@ -1,3 +1,7 @@
+local bufrename = require("infra.bufrename")
+local prefer = require("infra.prefer")
+local bufmap = require("infra.keymap.buffer")
+
 local api = vim.api
 
 local state = { using = false, bufnr = nil, callback = nil, winid = nil, no_autocmd = false }
@@ -34,26 +38,27 @@ do
     complete()
   end
 
-  local function bufmap(mode, lhs, rhs) api.nvim_buf_set_keymap(state.bufnr, mode, lhs, "", { noremap = true, callback = rhs }) end
-
   function state:prepare_buffer()
     if self.bufnr ~= nil and api.nvim_buf_is_valid(self.bufnr) then return end
 
     self.bufnr = api.nvim_create_buf(false, true)
+    bufrename(self.bufnr, "tui://input")
 
-    bufmap("i", "<cr>", function()
+    local bm = bufmap.wraps(state.bufnr)
+
+    bm.i("<cr>", function()
       vim.cmd.stopinsert()
       -- todo: nvim bug: stopinsert wont work without this .schedule()
       vim.schedule(resume)
     end)
-    bufmap("i", "<c-c>", function()
+    bm.i("<c-c>", function()
       vim.cmd.stopinsert()
       -- todo: nvim bug: stopinsert wont work without this .schedule()
       vim.schedule(cancel)
     end)
-    bufmap("n", "<cr>", resume)
-    bufmap("n", "q", cancel)
-    bufmap("n", "<c-]>", cancel)
+    bm.n("<cr>", resume)
+    bm.n("q", cancel)
+    bm.n("<c-]>", cancel)
 
     api.nvim_create_autocmd("winclosed", {
       buffer = state.bufnr,
@@ -78,11 +83,16 @@ return function(opts, on_confirm)
   assert(api.nvim_buf_line_count(state.bufnr) == 1)
 
   do -- setup window
-    local width = opts.default and 50 or math.max(#opts.default, 50)
+    local width
+    if opts.default == nil then
+      width = 50
+    else
+      width = math.max(#opts.default, 50)
+    end
     local height = opts.prompt and 2 or 1
     state.winid = api.nvim_open_win(state.bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 0, width = width, height = height })
 
-    if opts.prompt then vim.wo[state.winid].winbar = opts.prompt end
+    if opts.prompt then prefer.wo(state.winid, "winbar", opts.prompt) end
 
     if opts.default then
       api.nvim_buf_set_lines(state.bufnr, 0, 1, false, { opts.default })

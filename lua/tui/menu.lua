@@ -9,9 +9,13 @@
 --  * respects #choices and max(#each-choice)
 --* dont reset window options and buffer lines initiatively
 
-local api = vim.api
 local jelly = require("infra.jellyfish")("tui.menu")
 local fn = require("infra.fn")
+local bufrename = require("infra.bufrename")
+local prefer = require("infra.prefer")
+local bufmap = require("infra.keymap.buffer")
+
+local api = vim.api
 
 local Keys = {}
 do
@@ -28,7 +32,7 @@ do
   end
 
   function Keys.index(key) return dict[key] end
-  function Keys.iter() return fn.iterate(list) end
+  function Keys.iter() return fn.iter(list) end
 end
 
 local state = { bufnr = nil, winid = nil, using = false, entries = nil, choice = nil }
@@ -41,7 +45,9 @@ do
     end
 
     state.bufnr = api.nvim_create_buf(false, true)
+    bufrename(state.bufnr, "tui://menu")
     for key in Keys.iter() do
+      -- unable to use infra.keymap.buffer here
       api.nvim_buf_set_keymap(state.bufnr, "n", key, "", {
         noremap = true,
         nowait = true,
@@ -55,11 +61,9 @@ do
       })
     end
 
-    for key in fn.iterate({ "q", "<esc>", "<c-[>", "<c-]>" }) do
-      api.nvim_buf_set_keymap(state.bufnr, "n", key, "", {
-        noremap = true,
-        callback = function() api.nvim_win_close(state.winid, false) end,
-      })
+    local bm = bufmap.wraps(state.bufnr)
+    for key in fn.iter({ "q", "<esc>", "<c-[>", "<c-]>" }) do
+      bm.n(key, function() api.nvim_win_close(state.winid, false) end)
     end
 
     return state.bufnr
@@ -102,7 +106,7 @@ return function(entries, opts, callback)
     local lines = {}
     local line_max = 0
     local key_iter = Keys.iter()
-    for ent in fn.iterate(state.entries) do
+    for ent in fn.iter(state.entries) do
       local key = assert(key_iter(), "no more lhs is available")
       local line = string.format(" %s. %s", key, formatter(ent))
       table.insert(lines, line)
@@ -123,7 +127,7 @@ return function(entries, opts, callback)
       relative = "cursor", row = 1, col = 0, width = win_width, height = win_height,
       style = "minimal",
     })
-    api.nvim_win_set_option(state.winid, "winbar", prompt or "")
+    prefer.wo(state.winid, "winbar", prompt or "")
 
     api.nvim_create_autocmd("winleave", {
       buffer = state.bufnr,
