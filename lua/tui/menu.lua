@@ -11,7 +11,7 @@
 
 local bufrename = require("infra.bufrename")
 local fn = require("infra.fn")
-local jelly = require("infra.jellyfish")("tui.menu", "debug")
+local jelly = require("infra.jellyfish")("tui.menu")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
