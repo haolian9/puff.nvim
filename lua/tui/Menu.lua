@@ -11,6 +11,7 @@
 
 local bufrename = require("infra.bufrename")
 local fn = require("infra.fn")
+local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("tui.Menu")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -78,10 +79,7 @@ do
         })
       end
 
-      local bm = bufmap.wraps(canvas.bufnr)
-      for key in fn.iter({ "q", "<esc>", "<c-[>", "<c-]>" }) do
-        bm.n(key, function() api.nvim_win_close(canvas.winid, false) end)
-      end
+      handyclosekeys(canvas.winid)
 
       --* `:q` triggers winclosed
       --* ignore winleave, which is hard to handle
