@@ -1,6 +1,6 @@
 local bufrename = require("infra.bufrename")
-local prefer = require("infra.prefer")
 local bufmap = require("infra.keymap.buffer")
+local prefer = require("infra.prefer")
 
 local api = vim.api
 
@@ -71,10 +71,11 @@ do
   end
 end
 
----@param opts {prompt?: string, default?: string, completion?: string, heighlight: fun()}
----@param on_confirm fun(input?: string)
-return function(opts, on_confirm)
-  assert(on_confirm)
+---opts.{completion,highlight} are not supported
+---@param opts {prompt?: string, default?: string}
+---@param on_complete fun(input_text?: string)
+return function(opts, on_complete)
+  assert(on_complete)
 
   assert(not state.using, "another input is being used")
   state.using = true
@@ -100,5 +101,5 @@ return function(opts, on_confirm)
     end
   end
 
-  state.callback = on_confirm
+  state.callback = on_complete
 end
