@@ -1,73 +1,46 @@
 local bufrename = require("infra.bufrename")
+local ctx = require("infra.ctx")
+local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
 local api = vim.api
 
-local state = { using = false, bufnr = nil, callback = nil, winid = nil, no_autocmd = false }
+local InputCollector
 do
-  local function complete(input)
-    api.nvim_win_close(state.winid, false)
-    local ok, err = xpcall(state.callback, debug.traceback, input)
-    do
-      -- the buffer should be reused
-      api.nvim_buf_set_lines(state.bufnr, 0, -1, false, {})
-      state.using = false
-      state.callback = nil
-      state.winid = nil
-      state.no_autocmd = false
-    end
-    if not ok then error(err) end
+  ---@class tui.InputCollector
+  ---@field bufnr integer
+  ---@field value? string
+  local Prototype = {}
+  Prototype.__index = Prototype
+
+  function Prototype:collect()
+    assert(api.nvim_buf_line_count(self.bufnr) == 1)
+    local lines = api.nvim_buf_get_lines(self.bufnr, 0, 1, false)
+    self.value = lines[1]
   end
 
-  local function resume()
-    state.no_autocmd = true
+  ---@param bufnr integer
+  ---@return tui.InputCollector
+  function InputCollector(bufnr) return setmetatable({ bufnr = bufnr }, Prototype) end
+end
 
-    local input
-    do
-      assert(api.nvim_buf_line_count(state.bufnr) == 1, "unreachable")
-      local lines = api.nvim_buf_get_lines(state.bufnr, 0, 1, false)
-      input = lines[1]
-    end
-
-    complete(input)
+---@param input? tui.InputCollector
+---@param stop_insert? boolean @nil=false
+local function make_rhs(input, stop_insert)
+  return function()
+    if input ~= nil then input:collect() end
+    if stop_insert then ex("stopinsert") end
+    api.nvim_win_close(0, false)
   end
+end
 
-  local function cancel()
-    state.no_autocmd = false
-    complete()
-  end
-
-  function state:prepare_buffer()
-    if self.bufnr ~= nil and api.nvim_buf_is_valid(self.bufnr) then return end
-
-    self.bufnr = api.nvim_create_buf(false, true)
-    bufrename(self.bufnr, "tui://input")
-
-    local bm = bufmap.wraps(state.bufnr)
-
-    bm.i("<cr>", function()
-      vim.cmd.stopinsert()
-      -- todo: nvim bug: stopinsert wont work without this .schedule()
-      vim.schedule(resume)
-    end)
-    bm.i("<c-c>", function()
-      vim.cmd.stopinsert()
-      -- todo: nvim bug: stopinsert wont work without this .schedule()
-      vim.schedule(cancel)
-    end)
-    bm.n("<cr>", resume)
-    bm.n("q", cancel)
-    bm.n("<c-]>", cancel)
-
-    api.nvim_create_autocmd("winclosed", {
-      buffer = state.bufnr,
-      once = true,
-      callback = function()
-        if self.no_autocmd then return end
-        cancel()
-      end,
-    })
+local next_id
+do
+  local count = 0
+  function next_id()
+    count = count + 1
+    return count
   end
 end
 
@@ -75,31 +48,42 @@ end
 ---@param opts {prompt?: string, default?: string}
 ---@param on_complete fun(input_text?: string)
 return function(opts, on_complete)
-  assert(on_complete)
+  local id = next_id()
 
-  assert(not state.using, "another input is being used")
-  state.using = true
+  local bufnr
+  do
+    bufnr = api.nvim_create_buf(false, true)
+    prefer.bo(bufnr, "bufhidden", "wipe")
+    bufrename(bufnr, string.format("tui://input#%d", id))
 
-  state:prepare_buffer()
-  assert(api.nvim_buf_line_count(state.bufnr) == 1)
+    local input = InputCollector(bufnr)
 
-  do -- setup window
-    local width
-    if opts.default == nil then
-      width = 50
-    else
-      width = math.max(#opts.default, 50)
+    do
+      local bm = bufmap.wraps(bufnr)
+
+      bm.i("<cr>", make_rhs(input, true))
+      bm.i("<c-c>", make_rhs(nil, true))
+      bm.n("<cr>", make_rhs(input))
+      local rhs_noinput = make_rhs()
+      bm.n("q", rhs_noinput)
+      bm.n("<esc>", rhs_noinput)
+      bm.n("<c-[>", rhs_noinput)
+      bm.n("<c-]>", rhs_noinput)
     end
-    local height = opts.prompt and 2 or 1
-    state.winid = api.nvim_open_win(state.bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 0, width = width, height = height })
 
-    if opts.prompt then prefer.wo(state.winid, "winbar", opts.prompt) end
-
-    if opts.default then
-      api.nvim_buf_set_lines(state.bufnr, 0, 1, false, { opts.default })
-      api.nvim_win_set_cursor(state.winid, { 1, #opts.default })
-    end
+    api.nvim_create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = function() on_complete(input.value) end })
   end
 
-  state.callback = on_complete
+  local winid
+  do -- setup window
+    local width = opts.default and math.max(#opts.default, 50) or 50
+    local height = opts.prompt and 2 or 1
+    winid = api.nvim_open_win(bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 0, width = width, height = height })
+    if opts.prompt then prefer.wo(winid, "winbar", opts.prompt) end
+
+    if opts.default then
+      ctx.no_undo(bufnr, function() api.nvim_buf_set_lines(bufnr, 0, 1, false, { opts.default }) end)
+      api.nvim_win_set_cursor(winid, { 1, #opts.default })
+    end
+  end
 end

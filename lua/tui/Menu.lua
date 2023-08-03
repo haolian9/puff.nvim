@@ -10,10 +10,8 @@
 --* dont reset window options and buffer lines initiatively
 
 local bufrename = require("infra.bufrename")
-local fn = require("infra.fn")
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("tui.Menu")
-local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
 local api = vim.api
@@ -79,11 +77,9 @@ do
         })
       end
 
-      handyclosekeys(canvas.winid)
+      handyclosekeys(canvas.bufnr)
 
-      --* `:q` triggers winclosed
-      --* ignore winleave, which is hard to handle
-      api.nvim_create_autocmd("winclosed", {
+      api.nvim_create_autocmd("bufwipeout", {
         buffer = canvas.bufnr,
         once = true,
         callback = function()
@@ -104,11 +100,15 @@ do
   end
 end
 
-local count = 0
+local next_id
+do
+  local count = 0
+  function next_id()
+    count = count + 1
+    return count
+  end
+end
 
 ---@param key_pool tui.KeyPool
 ---@return tui.Menu
-return function(key_pool)
-  count = count + 1
-  return setmetatable({ id = count, key_pool = key_pool }, Menu)
-end
+return function(key_pool) return setmetatable({ id = next_id(), key_pool = key_pool }, Menu) end
