@@ -10,6 +10,7 @@
 --* dont reset window options and buffer lines initiatively
 
 local bufrename = require("infra.bufrename")
+local Ephemeral = require"infra.Ephemeral"
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("tui.Menu")
 local prefer = require("infra.prefer")
@@ -57,9 +58,8 @@ do
     local canvas = { entries = entries, callback = callback, choice = nil, bufnr = nil, winid = nil }
 
     do -- setup buf
-      canvas.bufnr = api.nvim_create_buf(false, true)
+      canvas.bufnr = Ephemeral(nil, lines)
 
-      prefer.bo(canvas.bufnr, "bufhidden", "wipe")
       bufrename(canvas.bufnr, string.format("tui://menu#%d", self.id))
 
       for key in self.key_pool:iter() do
@@ -89,8 +89,7 @@ do
       })
     end
 
-    do -- render the content and display
-      api.nvim_buf_set_lines(canvas.bufnr, 0, -1, false, lines)
+    do -- display
       local winid = api.nvim_open_win(canvas.bufnr, true, { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height, style = "minimal" })
       canvas.winid = winid
       prefer.wo(winid, "winbar", prompt or "")

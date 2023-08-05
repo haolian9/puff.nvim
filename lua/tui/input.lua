@@ -1,5 +1,6 @@
 local bufrename = require("infra.bufrename")
 local ctx = require("infra.ctx")
+local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -45,15 +46,14 @@ do
 end
 
 ---opts.{completion,highlight} are not supported
----@param opts {prompt?: string, default?: string}
+---@param opts {prompt?: string, default?: string, enter_insertmode?: boolean}
 ---@param on_complete fun(input_text?: string)
 return function(opts, on_complete)
   local id = next_id()
 
   local bufnr
   do
-    bufnr = api.nvim_create_buf(false, true)
-    prefer.bo(bufnr, "bufhidden", "wipe")
+    bufnr = Ephemeral({ modifiable = true, undolevels = 1 }, opts.default and { opts.default } or nil)
     bufrename(bufnr, string.format("tui://input#%d", id))
 
     local input = InputCollector(bufnr)
@@ -80,10 +80,6 @@ return function(opts, on_complete)
     local height = opts.prompt and 2 or 1
     winid = api.nvim_open_win(bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 0, width = width, height = height })
     if opts.prompt then prefer.wo(winid, "winbar", opts.prompt) end
-
-    if opts.default then
-      ctx.no_undo(bufnr, function() api.nvim_buf_set_lines(bufnr, 0, 1, false, { opts.default }) end)
-      api.nvim_win_set_cursor(winid, { 1, #opts.default })
-    end
+    if opts.enter_insertmode then ex("startinsert") end
   end
 end
