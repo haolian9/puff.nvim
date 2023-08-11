@@ -1,9 +1,7 @@
 local bufrename = require("infra.bufrename")
-local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
-local prefer = require("infra.prefer")
 
 local api = vim.api
 
@@ -36,31 +34,23 @@ local function make_rhs(input, stop_insert)
   end
 end
 
-local next_id
-do
-  local count = 0
-  function next_id()
-    count = count + 1
-    return count
-  end
-end
+---@class tui.input.Opts
+---@field prompt? string
+---@field default? string
+---@field startinsert? boolean @nil=false
+---@field wincall? fun(winid: integer, bufnr: integer)
 
 ---opts.{completion,highlight} are not supported
----@param opts {prompt?: string, default?: string, enter_insertmode?: boolean}
+---@param opts tui.input.Opts
 ---@param on_complete fun(input_text?: string)
 return function(opts, on_complete)
-  local id = next_id()
-
   local bufnr
   do
     bufnr = Ephemeral({ modifiable = true, undolevels = 1 }, opts.default and { opts.default } or nil)
-    bufrename(bufnr, string.format("tui://input#%d", id))
-
+    bufrename(bufnr, string.format("input://%s/%d", opts.prompt, bufnr))
     local input = InputCollector(bufnr)
-
     do
       local bm = bufmap.wraps(bufnr)
-
       bm.i("<cr>", make_rhs(input, true))
       bm.i("<c-c>", make_rhs(nil, true))
       bm.n("<cr>", make_rhs(input))
@@ -70,16 +60,16 @@ return function(opts, on_complete)
       bm.n("<c-[>", rhs_noinput)
       bm.n("<c-]>", rhs_noinput)
     end
-
     api.nvim_create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = function() on_complete(input.value) end })
   end
 
   local winid
-  do -- setup window
+  do
     local width = opts.default and math.max(#opts.default, 50) or 50
-    local height = opts.prompt and 2 or 1
-    winid = api.nvim_open_win(bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 0, width = width, height = height })
-    if opts.prompt then prefer.wo(winid, "winbar", opts.prompt) end
-    if opts.enter_insertmode then ex("startinsert") end
+    winid = api.nvim_open_win(bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 2, width = width, height = 1 })
+    if opts.default then api.nvim_win_set_cursor(winid, { 1, #opts.default }) end
   end
+
+  if opts.wincall then opts.wincall(winid, bufnr) end
+  if opts.startinsert then ex("startinsert") end
 end

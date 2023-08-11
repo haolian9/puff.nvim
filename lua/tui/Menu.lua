@@ -10,15 +10,13 @@
 --* dont reset window options and buffer lines initiatively
 
 local bufrename = require("infra.bufrename")
-local Ephemeral = require"infra.Ephemeral"
+local Ephemeral = require("infra.Ephemeral")
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("tui.Menu")
-local prefer = require("infra.prefer")
 
 local api = vim.api
 
 ---@class tui.Menu
----@field private id integer
 ---@field private key_pool tui.KeyPool
 local Menu = {}
 do
@@ -48,8 +46,6 @@ do
       win_height = #lines
       win_width = line_max + 1
       if prompt ~= nil then
-        -- 1->winbar
-        win_height = win_height + 1
         -- 1->留白
         win_width = math.max(win_width, math.min(#prompt, 20))
       end
@@ -60,7 +56,7 @@ do
     do -- setup buf
       canvas.bufnr = Ephemeral(nil, lines)
 
-      bufrename(canvas.bufnr, string.format("tui://menu#%d", self.id))
+      bufrename(canvas.bufnr, string.format("menu://%s/%d", prompt or "", canvas.bufnr))
 
       for key in self.key_pool:iter() do
         -- unable to use infra.keymap.buffer here
@@ -92,22 +88,12 @@ do
     do -- display
       local winid = api.nvim_open_win(canvas.bufnr, true, { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height, style = "minimal" })
       canvas.winid = winid
-      prefer.wo(winid, "winbar", prompt or "")
     end
 
     -- there is no easy way to hide the cursor, let it be there
   end
 end
 
-local next_id
-do
-  local count = 0
-  function next_id()
-    count = count + 1
-    return count
-  end
-end
-
 ---@param key_pool tui.KeyPool
 ---@return tui.Menu
-return function(key_pool) return setmetatable({ id = next_id(), key_pool = key_pool }, Menu) end
+return function(key_pool) return setmetatable({ key_pool = key_pool }, Menu) end
