@@ -1,4 +1,3 @@
-local bufrename = require("infra.bufrename")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
@@ -46,8 +45,10 @@ end
 return function(opts, on_complete)
   local bufnr
   do
-    bufnr = Ephemeral({ modifiable = true, undolevels = 1 }, opts.default and { opts.default } or nil)
-    bufrename(bufnr, string.format("input://%s/%d", opts.prompt, bufnr))
+    local function namefn(nr) return string.format("input://%s/%d", opts.prompt, nr) end
+    bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, opts.default and { opts.default } or nil)
+    --todo: show prompt as inline extmark
+
     local input = InputCollector(bufnr)
     do
       local bm = bufmap.wraps(bufnr)
@@ -66,7 +67,8 @@ return function(opts, on_complete)
   local winid
   do
     local width = opts.default and math.max(#opts.default, 50) or 50
-    winid = api.nvim_open_win(bufnr, true, { relative = "cursor", style = "minimal", row = 1, col = 2, width = width, height = 1 })
+    local winopts = { relative = "cursor", row = 1, col = 2, width = width, height = 1 }
+    winid = api.nvim_open_win(bufnr, true, winopts)
     if opts.default then api.nvim_win_set_cursor(winid, { 1, #opts.default }) end
   end
 

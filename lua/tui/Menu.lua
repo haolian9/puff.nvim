@@ -9,9 +9,7 @@
 --  * respects #choices and max(#each-choice)
 --* dont reset window options and buffer lines initiatively
 
-local bufrename = require("infra.bufrename")
 local Ephemeral = require("infra.Ephemeral")
-local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("tui.Menu")
 
 local api = vim.api
@@ -54,9 +52,8 @@ do
     local canvas = { entries = entries, callback = callback, choice = nil, bufnr = nil, winid = nil }
 
     do -- setup buf
-      canvas.bufnr = Ephemeral(nil, lines)
-
-      bufrename(canvas.bufnr, string.format("menu://%s/%d", prompt or "", canvas.bufnr))
+      local function namefn(bufnr) return string.format("menu://%s/%d", prompt or "", bufnr) end
+      canvas.bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
 
       for key in self.key_pool:iter() do
         -- unable to use infra.keymap.buffer here
@@ -73,8 +70,6 @@ do
         })
       end
 
-      handyclosekeys(canvas.bufnr)
-
       api.nvim_create_autocmd("bufwipeout", {
         buffer = canvas.bufnr,
         once = true,
@@ -86,7 +81,8 @@ do
     end
 
     do -- display
-      local winid = api.nvim_open_win(canvas.bufnr, true, { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height, style = "minimal" })
+      local winopts = { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height }
+      local winid = api.nvim_open_win(canvas.bufnr, true, winopts)
       canvas.winid = winid
     end
 
