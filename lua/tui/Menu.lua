@@ -11,6 +11,7 @@
 
 local Ephemeral = require("infra.Ephemeral")
 local jelly = require("infra.jellyfish")("tui.Menu")
+local bufmap = require("infra.keymap.buffer")
 
 local api = vim.api
 
@@ -43,10 +44,6 @@ do
       end
       win_height = #lines
       win_width = line_max + 1
-      if prompt ~= nil then
-        -- 1->留白
-        win_width = math.max(win_width, math.min(#prompt, 20))
-      end
     end
 
     local canvas = { entries = entries, callback = callback, choice = nil, bufnr = nil, winid = nil }
@@ -55,19 +52,15 @@ do
       local function namefn(bufnr) return string.format("menu://%s/%d", prompt or "", bufnr) end
       canvas.bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
 
+      local bm = bufmap.wraps(canvas.bufnr)
       for key in self.key_pool:iter() do
-        -- unable to use infra.keymap.buffer here
-        api.nvim_buf_set_keymap(canvas.bufnr, "n", key, "", {
-          noremap = true,
-          nowait = true,
-          callback = function()
-            local n = assert(self.key_pool:index(key), "unreachable: invalid key")
-            -- not a present entry, do nothing
-            if n > api.nvim_buf_line_count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
-            canvas.choice = n
-            api.nvim_win_close(canvas.winid, false)
-          end,
-        })
+        bm.n(key, function()
+          local n = assert(self.key_pool:index(key), "unreachable: invalid key")
+          -- not a present entry, do nothing
+          if n > api.nvim_buf_line_count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
+          canvas.choice = n
+          api.nvim_win_close(0, false)
+        end)
       end
 
       api.nvim_create_autocmd("bufwipeout", {
