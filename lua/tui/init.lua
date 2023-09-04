@@ -1,7 +1,7 @@
+local M = {}
+
 local KeyPool = require("tui.KeyPool")
 local Menu = require("tui.Menu")
-
-local M = {}
 
 M.input = require("tui.input")
 
