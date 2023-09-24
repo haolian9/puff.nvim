@@ -1,9 +1,9 @@
 local M = {}
 
-local KeyPool = require("tui.KeyPool")
-local Menu = require("tui.Menu")
+local KeyPool = require("puff.KeyPool")
+local Menu = require("puff.Menu")
 
-M.input = require("tui.input")
+M.input = require("puff.input")
 
 do
   local key_pool = KeyPool("asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm")
@@ -29,7 +29,7 @@ end
 
 do
   local key_pool = KeyPool("yn")
-  local ents = { "yes! go ahead", "no! wait" }
+  local ents = { "搞啊！", "等会。" }
   local function fmt(ent) return ent end
 
   ---@param opts {prompt?: string}

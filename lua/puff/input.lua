@@ -6,7 +6,7 @@ local api = vim.api
 
 local InputCollector
 do
-  ---@class tui.InputCollector
+  ---@class puff.InputCollector
   ---@field bufnr integer
   ---@field value? string
   local Prototype = {}
@@ -19,11 +19,11 @@ do
   end
 
   ---@param bufnr integer
-  ---@return tui.InputCollector
+  ---@return puff.InputCollector
   function InputCollector(bufnr) return setmetatable({ bufnr = bufnr }, Prototype) end
 end
 
----@param input? tui.InputCollector
+---@param input? puff.InputCollector
 ---@param stop_insert? boolean @nil=false
 local function make_rhs(input, stop_insert)
   return function()
@@ -33,14 +33,15 @@ local function make_rhs(input, stop_insert)
   end
 end
 
----@class tui.input.Opts
+---@class puff.input.Opts
 ---@field prompt? string
 ---@field default? string
 ---@field startinsert? boolean @nil=false
----@field wincall? fun(winid: integer, bufnr: integer)
+---@field wincall? fun(winid: integer, bufnr: integer) @timing: just created the win without setting any winopts
+---@field bufcall? fun(bufnr: integer) @timing: just created the buf without setting any bufopts
 
 ---opts.{completion,highlight} are not supported
----@param opts tui.input.Opts
+---@param opts puff.input.Opts
 ---@param on_complete fun(input_text?: string)
 return function(opts, on_complete)
   local bufnr
@@ -48,6 +49,8 @@ return function(opts, on_complete)
     local function namefn(nr) return string.format("input://%s/%d", opts.prompt, nr) end
     bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, opts.default and { opts.default } or nil)
     --todo: show prompt as inline extmark
+
+    if opts.bufcall then opts.bufcall(bufnr) end
 
     local input = InputCollector(bufnr)
     do
@@ -70,8 +73,8 @@ return function(opts, on_complete)
     local winopts = { relative = "cursor", row = 1, col = 2, width = width, height = 1 }
     winid = api.nvim_open_win(bufnr, true, winopts)
     if opts.default then api.nvim_win_set_cursor(winid, { 1, #opts.default }) end
+    if opts.wincall then opts.wincall(winid, bufnr) end
   end
 
-  if opts.wincall then opts.wincall(winid, bufnr) end
   if opts.startinsert then ex("startinsert") end
 end

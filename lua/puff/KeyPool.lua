@@ -1,6 +1,6 @@
 local fn = require("infra.fn")
 
----@class tui.KeyPool
+---@class puff.KeyPool
 ---@field private list string[]
 ---@field private dict {[string]: integer}
 local KeyPool = {}
@@ -16,7 +16,7 @@ do
 end
 
 ---@param keys string @printable ascii key string
----@return tui.KeyPool
+---@return puff.KeyPool
 return function(keys)
   local list = {}
   local dict = {}

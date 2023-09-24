@@ -10,13 +10,13 @@
 --* dont reset window options and buffer lines initiatively
 
 local Ephemeral = require("infra.Ephemeral")
-local jelly = require("infra.jellyfish")("tui.Menu")
+local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
 
 local api = vim.api
 
----@class tui.Menu
----@field private key_pool tui.KeyPool
+---@class puff.Menu
+---@field private key_pool puff.KeyPool
 local Menu = {}
 do
   Menu.__index = Menu
@@ -24,8 +24,8 @@ do
   ---@param entries string[]
   ---@param formatter fun(entry: string):string
   ---@param prompt? string
-  ---@param callback fun(entry: string?, index: number?)
-  function Menu:display(entries, formatter, prompt, callback)
+  ---@param on_decide fun(entry: string?, index: number?)
+  function Menu:display(entries, formatter, prompt, on_decide)
     local lines = {}
     do
       local key_iter = self.key_pool:iter()
@@ -46,7 +46,7 @@ do
       win_width = line_max + 1
     end
 
-    local canvas = { entries = entries, callback = callback, choice = nil, bufnr = nil, winid = nil }
+    local canvas = { entries = entries, on_decide = on_decide, choice = nil, bufnr = nil, winid = nil }
 
     do -- setup buf
       local function namefn(bufnr) return string.format("menu://%s/%d", prompt or "", bufnr) end
@@ -59,7 +59,7 @@ do
           -- not a present entry, do nothing
           if n > api.nvim_buf_line_count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
           canvas.choice = n
-          api.nvim_win_close(0, false)
+          api.nvim_win_close(canvas.winid, false)
         end)
       end
 
@@ -68,7 +68,7 @@ do
         once = true,
         callback = function()
           local choice = canvas.choice
-          canvas.callback(canvas.entries[choice], choice)
+          canvas.on_decide(canvas.entries[choice], choice)
         end,
       })
     end
@@ -83,6 +83,6 @@ do
   end
 end
 
----@param key_pool tui.KeyPool
----@return tui.Menu
+---@param key_pool puff.KeyPool
+---@return puff.Menu
 return function(key_pool) return setmetatable({ key_pool = key_pool }, Menu) end
