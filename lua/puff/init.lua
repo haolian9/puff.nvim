@@ -13,6 +13,7 @@ do
   ---@param opts {prompt: string?, format_item: fun(entry: string): (string), kind: string?}
   ---@param callback fun(entry: string?, index: number?)
   function M.select(entries, opts, callback)
+    assert(#entries > 0)
     opts = opts or {}
 
     local formatter
