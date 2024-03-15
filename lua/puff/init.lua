@@ -30,13 +30,15 @@ end
 
 do
   local key_pool = KeyPool("yn")
-  local ents = { "搞啊！", "等会。" }
+  local default_ents = { "搞啊！", "等会。" }
   local function fmt(ent) return ent end
 
-  ---@param opts {prompt?: string}
+  ---@param opts {prompt?: string, ents?: {[1]: string, [2]: string}}
   ---@param on_decide fun(confirmed: boolean)
   function M.confirm(opts, on_decide)
     local menu = Menu(key_pool)
+    local ents = opts.ents or default_ents
+    assert(#ents == 2)
     menu:display(ents, fmt, opts.prompt, function(_, index) on_decide(index == 1) end)
   end
 end
