@@ -12,6 +12,7 @@
 local Ephemeral = require("infra.Ephemeral")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
+local rifts = require("infra.rifts")
 
 local api = vim.api
 
@@ -75,7 +76,7 @@ do
 
     do -- display
       local winopts = { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height }
-      local winid = api.nvim_open_win(canvas.bufnr, true, winopts)
+      local winid = rifts.open.win(canvas.bufnr, true, winopts)
       canvas.winid = winid
     end
 

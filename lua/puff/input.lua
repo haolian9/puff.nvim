@@ -1,6 +1,7 @@
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
+local rifts = require("infra.rifts")
 
 local api = vim.api
 
@@ -71,7 +72,7 @@ return function(opts, on_complete)
   do
     local width = opts.default and math.max(#opts.default, 50) or 50
     local winopts = { relative = "cursor", row = 1, col = 2, width = width, height = 1 }
-    winid = api.nvim_open_win(bufnr, true, winopts)
+    winid = rifts.open.win(bufnr, true, winopts)
     if opts.default then api.nvim_win_set_cursor(winid, { 1, #opts.default }) end
     if opts.wincall then opts.wincall(winid, bufnr) end
   end
