@@ -10,10 +10,10 @@ do
   ---@class puff.InputCollector
   ---@field bufnr integer
   ---@field value? string
-  local Prototype = {}
-  Prototype.__index = Prototype
+  local Impl = {}
+  Impl.__index = Impl
 
-  function Prototype:collect()
+  function Impl:collect()
     assert(api.nvim_buf_line_count(self.bufnr) == 1)
     local lines = api.nvim_buf_get_lines(self.bufnr, 0, 1, false)
     self.value = lines[1]
@@ -21,7 +21,7 @@ do
 
   ---@param bufnr integer
   ---@return puff.InputCollector
-  function InputCollector(bufnr) return setmetatable({ bufnr = bufnr }, Prototype) end
+  function InputCollector(bufnr) return setmetatable({ bufnr = bufnr }, Impl) end
 end
 
 ---@param input? puff.InputCollector
