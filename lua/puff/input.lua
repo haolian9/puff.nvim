@@ -15,7 +15,7 @@ do
 
   function Impl:collect()
     assert(api.nvim_buf_line_count(self.bufnr) == 1)
-    local lines = api.nvim_buf_get_lines(self.bufnr, 0, 1, false)
+    local lines = api.nvim_buf_get_lines(self.bufnr, 0, 0 + 1, false)
     self.value = lines[1]
   end
 
