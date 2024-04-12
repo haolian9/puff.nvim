@@ -1,3 +1,4 @@
+local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local bufmap = require("infra.keymap.buffer")
@@ -14,9 +15,8 @@ do
   Impl.__index = Impl
 
   function Impl:collect()
-    assert(api.nvim_buf_line_count(self.bufnr) == 1)
-    local lines = api.nvim_buf_get_lines(self.bufnr, 0, 0 + 1, false)
-    self.value = lines[1]
+    assert(buflines.count(self.bufnr) == 1)
+    self.value = buflines.line(self.bufnr, 0)
   end
 
   ---@param bufnr integer

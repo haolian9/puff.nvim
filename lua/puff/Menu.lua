@@ -9,6 +9,7 @@
 --  * respects #choices and max(#each-choice)
 --* dont reset window options and buffer lines initiatively
 
+local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
@@ -58,7 +59,7 @@ do
         bm.n(key, function()
           local n = assert(self.key_pool:index(key), "unreachable: invalid key")
           -- not a present entry, do nothing
-          if n > api.nvim_buf_line_count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
+          if n > buflines.count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
           canvas.choice = n
           api.nvim_win_close(canvas.winid, false)
         end)
