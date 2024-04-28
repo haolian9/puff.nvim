@@ -1,6 +1,7 @@
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
+local feedkeys = require("infra.feedkeys")
 local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
 
@@ -37,7 +38,7 @@ end
 ---@class puff.input.Opts
 ---@field prompt? string
 ---@field default? string
----@field startinsert? boolean @nil=false
+---@field startinsert? 'i'|'a'|false @nil=false
 ---@field wincall? fun(winid: integer, bufnr: integer) @timing: just created the win without setting any winopts
 ---@field bufcall? fun(bufnr: integer) @timing: just created the buf without setting any bufopts
 
@@ -77,5 +78,5 @@ return function(opts, on_complete)
     if opts.wincall then opts.wincall(winid, bufnr) end
   end
 
-  if opts.startinsert then ex("startinsert") end
+  if opts.startinsert then feedkeys(opts.startinsert, "n") end
 end
