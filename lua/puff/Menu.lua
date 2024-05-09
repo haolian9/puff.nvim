@@ -70,7 +70,9 @@ do
         once = true,
         callback = function()
           local choice = canvas.choice
-          canvas.on_decide(canvas.entries[choice], choice)
+          vim.schedule(function() -- to avoid 'Vim:E1159: Cannot split a window when closing the buffer'
+            canvas.on_decide(canvas.entries[choice], choice)
+          end)
         end,
       })
     end

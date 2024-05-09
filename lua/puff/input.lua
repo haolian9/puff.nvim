@@ -2,8 +2,10 @@ local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local feedkeys = require("infra.feedkeys")
+local jelly = require("infra.jellyfish")("puff.input", "info")
 local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
+local wincursor = require("infra.wincursor")
 
 local api = vim.api
 
@@ -26,8 +28,8 @@ do
 end
 
 ---@param input? puff.InputCollector
----@param stop_insert? boolean @nil=false
-local function make_rhs(input, stop_insert)
+---@param stop_insert boolean
+local function make_closewin_rhs(input, stop_insert)
   return function()
     if input ~= nil then input:collect() end
     if stop_insert then ex("stopinsert") end
@@ -38,7 +40,7 @@ end
 ---@class puff.input.Opts
 ---@field prompt? string
 ---@field default? string
----@field startinsert? 'i'|'a'|false @nil=false
+---@field startinsert? 'i'|'a'|'I'|'A'false @nil=false
 ---@field wincall? fun(winid: integer, bufnr: integer) @timing: just created the win without setting any winopts
 ---@field bufcall? fun(bufnr: integer) @timing: just created the buf without setting any bufopts
 
@@ -55,18 +57,38 @@ return function(opts, on_complete)
     if opts.bufcall then opts.bufcall(bufnr) end
 
     local input = InputCollector(bufnr)
+
+    api.nvim_create_autocmd("bufwipeout", {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        vim.schedule(function() -- to avoid 'Vim:E1159: Cannot split a window when closing the buffer'
+          on_complete(input.value)
+        end)
+      end,
+    })
+
+    local bm = bufmap.wraps(bufnr)
+
+    bm.i("<cr>", make_closewin_rhs(input, true))
+    bm.i("<c-c>", make_closewin_rhs(nil, true))
+    bm.n("<cr>", make_closewin_rhs(input, false))
+
     do
-      local bm = bufmap.wraps(bufnr)
-      bm.i("<cr>", make_rhs(input, true))
-      bm.i("<c-c>", make_rhs(nil, true))
-      bm.n("<cr>", make_rhs(input))
-      local rhs_noinput = make_rhs()
-      bm.n("q", rhs_noinput)
-      bm.n("<esc>", rhs_noinput)
-      bm.n("<c-[>", rhs_noinput)
-      bm.n("<c-]>", rhs_noinput)
+      local rhs = make_closewin_rhs(nil, false)
+      bm.n("q", rhs)
+      bm.n("<esc>", rhs)
+      bm.n("<c-[>", rhs)
+      bm.n("<c-]>", rhs)
     end
-    api.nvim_create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = function() on_complete(input.value) end })
+
+    do
+      local function rhs() jelly.info("o/O/yy has no effect here") end
+      bm.n("o", rhs)
+      bm.n("O", rhs)
+      bm.n("yy", rhs)
+      --todo: yyp
+    end
   end
 
   local winid
@@ -74,7 +96,7 @@ return function(opts, on_complete)
     local width = opts.default and math.max(#opts.default, 50) or 50
     local winopts = { relative = "cursor", row = 1, col = 2, width = width, height = 1 }
     winid = rifts.open.win(bufnr, true, winopts)
-    if opts.default then api.nvim_win_set_cursor(winid, { 1, #opts.default }) end
+    if opts.default then wincursor.go(winid, 0, #opts.default) end
     if opts.wincall then opts.wincall(winid, bufnr) end
   end
 
