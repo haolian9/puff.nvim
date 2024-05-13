@@ -50,7 +50,7 @@ do
 
     local canvas = { entries = entries, on_decide = on_decide, choice = nil, bufnr = nil, winid = nil }
 
-    do -- setup buf
+    do --setup buf
       local function namefn(bufnr) return string.format("menu://%s/%d", prompt or "", bufnr) end
       canvas.bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
 
