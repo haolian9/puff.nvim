@@ -6,7 +6,7 @@ local Menu = require("puff.Menu")
 M.input = require("puff.input")
 
 do
-  local key_pool = KeyPool("asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm")
+  local key_pool = KeyPool("asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm" .. "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM")
   local function default_formatter(ent) return ent end
 
   ---@param entries string[]
