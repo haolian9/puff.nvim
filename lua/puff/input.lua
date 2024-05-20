@@ -65,8 +65,9 @@ return function(opts, on_complete)
     local function namefn(nr) return string.format("input://%s/%d", opts.prompt, nr) end
     local lines = opts.default ~= nil and { opts.default } or nil
     bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, lines)
-    --todo: show prompt as inline extmark
+    --no: prompt as inline extmark isnt that appealing
 
+    --ATTENTION: potential race condition between opts.bufcall and the following bm()
     if opts.bufcall then opts.bufcall(bufnr) end
 
     local input = InputCollector(bufnr)
