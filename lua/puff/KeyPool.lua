@@ -1,4 +1,4 @@
-local fn = require("infra.fn")
+local itertools = require("infra.itertools")
 
 ---@class puff.KeyPool
 ---@field private list string[]
@@ -12,7 +12,7 @@ do
   function KeyPool:index(key) return self.dict[key] end
 
   ---@return fun(): string?
-  function KeyPool:iter() return fn.iter(self.list) end
+  function KeyPool:iter() return itertools.iter(self.list) end
 end
 
 ---@param keys string @printable ascii key string
@@ -26,7 +26,7 @@ return function(keys)
       list[i] = char
       dict[char] = i
     end
-    assert(not fn.contains(list, "q"), "q is reserved for quit")
+    assert(not itertools.contains(list, "q"), "q is reserved for quit")
   end
 
   return setmetatable({ list = list, dict = dict }, KeyPool)
