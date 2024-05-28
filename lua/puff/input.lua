@@ -41,9 +41,10 @@ end
 ---@class puff.input.Opts
 ---@field prompt? string @vim.ui.input
 ---@field default? string @vim.ui.input
----@field startinsert? 'i'|'a'|'I'|'A'false @nil=false
+---@field icon? string @it will be placed in the beginning of the input line
+---@field startinsert? 'i'|'a'|'I'|'A'|false @nil=false
 ---@field wincall? fun(winid: integer, bufnr: integer) @timing: just created the win without setting any winopts
----@field bufcall? fun(bufnr: integer) @timing: just created the buf without setting any bufopts
+---@field bufcall? fun(bufnr: integer) @timing: post created the buffer, pre bound keymaps
 ---@field remember? string @remember the last input as the given namespace as the .default when it's nil
 
 ---@type {[string]: string}
@@ -65,7 +66,15 @@ return function(opts, on_complete)
     local function namefn(nr) return string.format("input://%s/%d", opts.prompt, nr) end
     local lines = opts.default ~= nil and { opts.default } or nil
     bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, lines)
-    --no: prompt as inline extmark isnt that appealing
+
+    if opts.icon then
+      local ns = api.nvim_create_namespace("puff:input")
+      api.nvim_buf_set_extmark(bufnr, ns, 0, 0, {
+        virt_text = { { opts.icon, "Normal" } },
+        virt_text_pos = "inline",
+        right_gravity = false,
+      })
+    end
 
     --ATTENTION: potential race condition between opts.bufcall and the following bm()
     if opts.bufcall then opts.bufcall(bufnr) end
