@@ -11,7 +11,7 @@ do
 
   ---@param entries string[]
   ---@param opts {prompt: string?, format_item: fun(entry: string): (string), kind: string?}
-  ---@param callback fun(entry: string?, index: number?)
+  ---@param callback fun(entry: string?, index: number?) @index: 1-based
   function M.select(entries, opts, callback)
     assert(#entries > 0)
     opts = opts or {}
@@ -33,7 +33,7 @@ do
   local default_ents = { "搞啊！", "等会。" }
   local function fmt(ent) return ent end
 
-  ---@param opts {prompt?: string, ents?: {[1]: string, [2]: string}}
+  ---@param opts {prompt?: string, ents?: [string,string]}
   ---@param on_decide fun(confirmed: boolean)
   function M.confirm(opts, on_decide)
     local menu = Menu(key_pool)

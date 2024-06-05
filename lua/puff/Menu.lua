@@ -26,7 +26,7 @@ do
   ---@param entries string[]
   ---@param formatter fun(entry: string):string
   ---@param prompt? string
-  ---@param on_decide fun(entry: string?, index: number?)
+  ---@param on_decide fun(entry: string?, index: number?) @index: 1-based
   function Menu:display(entries, formatter, prompt, on_decide)
     local lines = {}
     do
