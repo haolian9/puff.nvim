@@ -9,11 +9,9 @@
 
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
-local jelly = require("infra.jellyfish")("puff.alert", "debug")
-local listlib = require("infra.listlib")
+local jelly = require("infra.jellyfish")("puff.alert", "info")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
-local unsafe = require("infra.unsafe")
 local wincursor = require("infra.wincursor")
 
 local api = vim.api
@@ -22,10 +20,6 @@ local uv = vim.uv
 local xmark_ns = api.nvim_create_namespace("puff.alert.icons")
 
 local urgency_hi = { low = "JellyDebug", normal = "JellyInfo", critical = "JellyError" }
-
-local function create_buf() --
-  return Ephemeral({ name = "puff://alert" })
-end
 
 local bufnr, winid
 
@@ -38,9 +32,13 @@ local timer = uv.new_timer()
 ---@param urgency 'low'|'normal'|'critical'
 ---@param timeout integer @in second
 return function(summary, body, icon, urgency, timeout)
-  assert(timeout > 0 and timeout < 5, "unreasonable timeout value")
+  assert(timeout > 0 and timeout <= 5, "unreasonable timeout value")
 
-  if not (bufnr and api.nvim_buf_is_valid(bufnr)) then bufnr = create_buf() end
+  if not (bufnr and api.nvim_buf_is_valid(bufnr)) then
+    bufnr = Ephemeral({ name = "puff://alert" })
+    local function rm_xmarks() api.nvim_buf_clear_namespace(bufnr, xmark_ns, 0, -1) end
+    api.nvim_create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = rm_xmarks })
+  end
 
   timer:stop()
 
@@ -56,16 +54,20 @@ return function(summary, body, icon, urgency, timeout)
 
   do --summary line
     local high = buflines.high(bufnr)
-    local text = { { summary, "JellySource" } }
-    if icon ~= nil then table.insert(text, 1, { icon }) end
 
+    local lnum
     if high == 0 then
-      api.nvim_buf_set_extmark(bufnr, xmark_ns, 0, 0, { virt_text = text, virt_text_pos = "inline", right_gravity = false })
+      buflines.replace(bufnr, 0, summary)
+      lnum = 0
     else
-      buflines.appends(bufnr, high, { "", "" })
-      local lnum = high + 2
-      api.nvim_buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = text, virt_text_pos = "inline", right_gravity = false })
+      buflines.appends(bufnr, high, { "", summary })
+      lnum = high + 2
     end
+
+    if icon ~= nil then --
+      api.nvim_buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = { { icon } }, virt_text_pos = "inline", right_gravity = false })
+    end
+    api.nvim_buf_add_highlight(bufnr, xmark_ns, "JellySource", lnum, 0, -1)
   end
 
   do --body lines
@@ -73,11 +75,10 @@ return function(summary, body, icon, urgency, timeout)
     local high = buflines.high(bufnr)
     local hi = urgency_hi[urgency]
 
-    buflines.appends(bufnr, high, listlib.zeros(#body, ""))
+    buflines.appends(bufnr, high, body)
 
-    for i, line in ipairs(body) do
-      local lnum = high + i
-      api.nvim_buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = { { line, hi } }, virt_text_pos = "inline", right_gravity = false })
+    for i = 1, #body do
+      api.nvim_buf_add_highlight(bufnr, xmark_ns, hi, high + i, 0, -1)
     end
   end
 
@@ -93,11 +94,10 @@ return function(summary, body, icon, urgency, timeout)
       horizontal = "right",
       vertical = "top",
     })
-    prefer.wo(winid, "wrap", true)
+    prefer.wo(winid, "wrap", false)
   else
     local line_count = buflines.count(bufnr)
     local height_max = math.floor(vim.go.lines * 0.5)
-    jelly.debug("line_count=%s, height_max=%s", line_count, height_max)
     api.nvim_win_set_config(winid, { height = math.min(line_count, height_max) })
   end
 
@@ -106,10 +106,8 @@ return function(summary, body, icon, urgency, timeout)
   do
     local dismiss = vim.schedule_wrap(function()
       if not api.nvim_win_is_valid(winid) then goto reset end
-
       --if the window get focused, wait for next round
       if api.nvim_get_current_win() == winid then return end
-
       --still has time
       if os.time() < dismiss_at then return end
 
