@@ -9,13 +9,13 @@
 
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
+local iuv = require("infra.iuv")
 local jelly = require("infra.jellyfish")("puff.alert", "info")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
 local api = vim.api
-local uv = vim.uv
 
 local xmark_ns = api.nvim_create_namespace("puff.alert.icons")
 
@@ -24,7 +24,7 @@ local urgency_hi = { low = "JellyDebug", normal = "JellyInfo", critical = "Jelly
 local bufnr, winid
 
 local dismiss_at --os.time(), unix timestamp, in seconds
-local timer = uv.new_timer()
+local timer = iuv.new_timer()
 
 ---@param summary string
 ---@param body string[]
