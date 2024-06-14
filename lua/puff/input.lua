@@ -52,7 +52,7 @@ local last_inputs = dictlib.CappedDict(32)
 
 ---NB: opts.{completion,highlight} are not supported
 ---@param opts puff.input.Opts
----@param on_complete fun(input_text?: string)
+---@param on_complete fun(input_text?: string) @note: nil is not ""
 return function(opts, on_complete)
   if opts.default == nil and opts.remember ~= nil then
     local last_input = last_inputs[opts.remember]
