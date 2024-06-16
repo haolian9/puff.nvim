@@ -13,9 +13,8 @@ local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
-
-local api = vim.api
 
 ---@class puff.Menu
 ---@field private key_pool puff.KeyPool
@@ -61,11 +60,11 @@ do
           -- not a present entry, do nothing
           if n > buflines.count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
           canvas.choice = n
-          api.nvim_win_close(canvas.winid, false)
+          ni.win_close(canvas.winid, false)
         end)
       end
 
-      api.nvim_create_autocmd("bufwipeout", {
+      ni.create_autocmd("bufwipeout", {
         buffer = canvas.bufnr,
         once = true,
         callback = function()

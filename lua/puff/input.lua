@@ -1,14 +1,13 @@
 local buflines = require("infra.buflines")
-local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local feedkeys = require("infra.feedkeys")
 local jelly = require("infra.jellyfish")("puff.input", "info")
 local bufmap = require("infra.keymap.buffer")
+local LRU = require("infra.LRU")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
-
-local api = vim.api
 
 local InputCollector
 do
@@ -34,7 +33,7 @@ local function make_closewin_rhs(input, stop_insert)
   return function()
     if input ~= nil then input:collect() end
     if stop_insert then ex("stopinsert") end
-    api.nvim_win_close(0, false)
+    ni.win_close(0, false)
   end
 end
 
@@ -48,7 +47,7 @@ end
 ---@field remember? string @remember the last input as the given namespace as the .default when it's nil
 
 ---@type {[string]: string}
-local last_inputs = dictlib.CappedDict(32)
+local last_inputs = LRU(32)
 
 ---NB: opts.{completion,highlight} are not supported
 ---@param opts puff.input.Opts
@@ -68,8 +67,8 @@ return function(opts, on_complete)
     bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, lines)
 
     if opts.icon then
-      local ns = api.nvim_create_namespace("puff:input")
-      api.nvim_buf_set_extmark(bufnr, ns, 0, 0, {
+      local ns = ni.create_namespace("puff:input")
+      ni.buf_set_extmark(bufnr, ns, 0, 0, {
         virt_text = { { opts.icon, "Normal" } },
         virt_text_pos = "inline",
         right_gravity = false,
@@ -81,7 +80,7 @@ return function(opts, on_complete)
 
     local input = InputCollector(bufnr)
 
-    api.nvim_create_autocmd("bufwipeout", {
+    ni.create_autocmd("bufwipeout", {
       buffer = bufnr,
       once = true,
       callback = function()

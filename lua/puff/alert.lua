@@ -11,13 +11,12 @@ local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local iuv = require("infra.iuv")
 local jelly = require("infra.jellyfish")("puff.alert", "info")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
-local api = vim.api
-
-local xmark_ns = api.nvim_create_namespace("puff.alert.icons")
+local xmark_ns = ni.create_namespace("puff.alert.icons")
 
 local urgency_hi = { low = "JellyDebug", normal = "JellyInfo", critical = "JellyError" }
 
@@ -34,10 +33,10 @@ local timer = iuv.new_timer()
 return function(summary, body, icon, urgency, timeout)
   assert(timeout > 0 and timeout <= 5, "unreasonable timeout value")
 
-  if not (bufnr and api.nvim_buf_is_valid(bufnr)) then
+  if not (bufnr and ni.buf_is_valid(bufnr)) then
     bufnr = Ephemeral({ name = "puff://alert" })
-    local function rm_xmarks() api.nvim_buf_clear_namespace(bufnr, xmark_ns, 0, -1) end
-    api.nvim_create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = rm_xmarks })
+    local function rm_xmarks() ni.buf_clear_namespace(bufnr, xmark_ns, 0, -1) end
+    ni.create_autocmd("bufwipeout", { buffer = bufnr, once = true, callback = rm_xmarks })
   end
 
   timer:stop()
@@ -65,9 +64,9 @@ return function(summary, body, icon, urgency, timeout)
     end
 
     if icon ~= nil then --
-      api.nvim_buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = { { icon } }, virt_text_pos = "inline", right_gravity = false })
+      ni.buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = { { icon } }, virt_text_pos = "inline", right_gravity = false })
     end
-    api.nvim_buf_add_highlight(bufnr, xmark_ns, "JellySource", lnum, 0, -1)
+    ni.buf_add_highlight(bufnr, xmark_ns, "JellySource", lnum, 0, -1)
   end
 
   do --body lines
@@ -78,11 +77,11 @@ return function(summary, body, icon, urgency, timeout)
     buflines.appends(bufnr, high, body)
 
     for i = 1, #body do
-      api.nvim_buf_add_highlight(bufnr, xmark_ns, hi, high + i, 0, -1)
+      ni.buf_add_highlight(bufnr, xmark_ns, hi, high + i, 0, -1)
     end
   end
 
-  if not (winid and api.nvim_win_is_valid(winid)) then
+  if not (winid and ni.win_is_valid(winid)) then
     winid = rifts.open.fragment(bufnr, false, {
       relative = "editor",
       border = "single",
@@ -98,21 +97,21 @@ return function(summary, body, icon, urgency, timeout)
   else
     local line_count = buflines.count(bufnr)
     local height_max = math.floor(vim.go.lines * 0.5)
-    api.nvim_win_set_config(winid, { height = math.min(line_count, height_max) })
+    ni.win_set_config(winid, { height = math.min(line_count, height_max) })
   end
 
   wincursor.follow(winid)
 
   do
     local dismiss = vim.schedule_wrap(function()
-      if not api.nvim_win_is_valid(winid) then goto reset end
+      if not ni.win_is_valid(winid) then goto reset end
       --if the window get focused, wait for next round
-      if api.nvim_get_current_win() == winid then return end
+      if ni.get_current_win() == winid then return end
       --still has time
       if os.time() < dismiss_at then return end
 
       --now we need to close the win
-      api.nvim_win_close(winid, false)
+      ni.win_close(winid, false)
 
       ::reset::
       timer:stop()
