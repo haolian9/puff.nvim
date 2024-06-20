@@ -11,81 +11,106 @@
 
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
+local listlib = require("infra.listlib")
 local ni = require("infra.ni")
 local rifts = require("infra.rifts")
+local unsafe = require("infra.unsafe")
+local wincursor = require("infra.wincursor")
 
----@class puff.Menu
----@field private key_pool puff.KeyPool
-local Menu = {}
-do
-  Menu.__index = Menu
+---@class puff.Menu.Spec
+---@field key_pool puff.KeyPool
+---@field subject? string
+---@field desc? string[]
+---@field entries string[]
+---@field entfmt fun(entry:string):string
+---@field on_decide fun(entry:string?,index:number?) @index: 1-based
 
-  ---@param entries string[]
-  ---@param formatter fun(entry: string):string
-  ---@param prompt? string
-  ---@param on_decide fun(entry: string?, index: number?) @index: 1-based
-  function Menu:display(entries, formatter, prompt, on_decide)
-    local lines = {}
-    do
-      local key_iter = self.key_pool:iter()
-      for _, ent in ipairs(entries) do
-        local key = assert(key_iter(), "no more lhs is available")
-        local line = string.format(" %s. %s", key, formatter(ent))
-        table.insert(lines, line)
-      end
+---@param spec puff.Menu.Spec
+---@return integer bufnr
+local function create_buf(spec)
+  local lines = {}
+  do
+    if spec.subject ~= nil then table.insert(lines, spec.subject) end
+    if spec.desc ~= nil then listlib.extend(lines, spec.desc) end
+
+    local key_iter = spec.key_pool:iter()
+    for _, ent in ipairs(spec.entries) do
+      local key = assert(key_iter(), "no more lhs is available")
+      local line = string.format(" %s. %s", key, spec.entfmt(ent))
+      table.insert(lines, line)
     end
-
-    local win_height, win_width
-    do
-      local line_max = 0
-      for _, line in ipairs(lines) do
-        if #line > line_max then line_max = #line end
-      end
-      win_height = #lines
-      win_width = line_max + 1
-    end
-
-    local canvas = { entries = entries, on_decide = on_decide, choice = nil, bufnr = nil, winid = nil }
-
-    do --setup buf
-      local function namefn(bufnr) return string.format("menu://%s/%d", prompt or "", bufnr) end
-      canvas.bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
-
-      local bm = bufmap.wraps(canvas.bufnr)
-      for key in self.key_pool:iter() do
-        bm.n(key, function()
-          local n = assert(self.key_pool:index(key), "unreachable: invalid key")
-          -- not a present entry, do nothing
-          if n > buflines.count(canvas.bufnr) then return jelly.info("no such option: %s", key) end
-          canvas.choice = n
-          ni.win_close(canvas.winid, false)
-        end)
-      end
-
-      ni.create_autocmd("bufwipeout", {
-        buffer = canvas.bufnr,
-        once = true,
-        callback = function()
-          local choice = canvas.choice
-          vim.schedule(function() -- to avoid 'Vim:E1159: Cannot split a window when closing the buffer'
-            canvas.on_decide(canvas.entries[choice], choice)
-          end)
-        end,
-      })
-    end
-
-    do -- display
-      local winopts = { relative = "cursor", row = 1, col = 0, width = win_width, height = win_height }
-      local winid = rifts.open.win(canvas.bufnr, true, winopts)
-      canvas.winid = winid
-    end
-
-    -- there is no easy way to hide the cursor, let it be there
   end
+
+  local bufnr = Ephemeral({ namepat = "menu://{bufnr}", handyclose = true }, lines)
+
+  do
+    local choice
+
+    local bm = bufmap.wraps(bufnr)
+    for key in spec.key_pool:iter() do
+      bm.n(key, function()
+        local n = assert(spec.key_pool:index(key), "unreachable: invalid key")
+        -- not a present entry, do nothing
+        if n > buflines.count(bufnr) then return jelly.info("no such option: %s", key) end
+        choice = n
+        ni.win_close(0, false)
+      end)
+    end
+
+    ni.create_autocmd("bufwipeout", {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        vim.schedule(function() -- to avoid 'Vim:E1159: Cannot split a window when closing the buffer'
+          spec.on_decide(spec.entries[choice], choice)
+        end)
+      end,
+    })
+  end
+
+  return bufnr
 end
 
----@param key_pool puff.KeyPool
----@return puff.Menu
-return function(key_pool) return setmetatable({ key_pool = key_pool }, Menu) end
+---@param spec puff.Menu.Spec
+---@param bufnr integer
+---@return integer winid
+local function open_win(spec, bufnr)
+  local winopts
+  do
+    local height = buflines.count(bufnr)
+
+    local width = 0
+    for _, len in unsafe.linelen_iter(bufnr, itertools.range(height)) do
+      if len > width then width = len end
+    end
+    width = width + 1 -- 留白
+
+    winopts = { relative = "cursor", row = 1, col = 0, width = width, height = height }
+  end
+
+  local winid = rifts.open.win(bufnr, true, winopts)
+
+  do --cursor
+    local lnum = 0
+    if spec.subject then lnum = lnum + 1 end
+    if spec.desc then lnum = lnum + #spec.desc end
+
+    wincursor.go(winid, lnum, 0)
+  end
+
+  return winid
+end
+
+---@param spec puff.Menu.Spec
+---@return integer winid
+---@return integer bufnr
+return function(spec)
+  local bufnr = create_buf(spec)
+  local winid = open_win(spec, bufnr)
+
+  -- there is no easy way to hide the cursor, let it be there
+  return winid, bufnr
+end
