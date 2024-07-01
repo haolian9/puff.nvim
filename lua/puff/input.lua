@@ -52,6 +52,8 @@ local last_inputs = LRU(32)
 ---NB: opts.{completion,highlight} are not supported
 ---@param opts puff.input.Opts
 ---@param on_complete fun(input_text?: string) @note: nil is not ""
+---@return integer winid
+---@return integer bufnr
 return function(opts, on_complete)
   if opts.default == nil and opts.remember ~= nil then
     local last_input = last_inputs[opts.remember]
@@ -124,4 +126,6 @@ return function(opts, on_complete)
   end
 
   if opts.startinsert then feedkeys(opts.startinsert, "n") end
+
+  return winid, bufnr
 end
