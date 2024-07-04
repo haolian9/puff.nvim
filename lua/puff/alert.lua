@@ -100,7 +100,7 @@ return function(summary, body, icon, urgency, timeout)
     ni.win_set_config(winid, { height = math.min(line_count, height_max) })
   end
 
-  wincursor.follow(winid)
+  wincursor.follow(winid, "bol")
 
   do
     local dismiss = vim.schedule_wrap(function()
