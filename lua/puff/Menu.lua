@@ -60,6 +60,8 @@ local function create_buf(spec)
       end)
     end
 
+    bm.n("<cr>", "<nop>")
+
     ni.create_autocmd("bufwipeout", {
       buffer = bufnr,
       once = true,
