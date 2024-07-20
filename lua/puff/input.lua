@@ -64,7 +64,7 @@ return function(opts, on_complete)
 
   local bufnr
   do
-    local function namefn(nr) return string.format("input://%s/%d", opts.prompt, nr) end
+    local function namefn(nr) return string.format("puff://input/%s/%d", opts.prompt, nr) end
     local lines = opts.default ~= nil and { opts.default } or nil
     bufnr = Ephemeral({ modifiable = true, undolevels = 1, namefn = namefn }, lines)
 

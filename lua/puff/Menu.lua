@@ -44,7 +44,7 @@ local function create_buf(spec)
     end
   end
 
-  local bufnr = Ephemeral({ namepat = "menu://{bufnr}", handyclose = true }, lines)
+  local bufnr = Ephemeral({ namepat = "puff://menu/{bufnr}", handyclose = true }, lines)
 
   do
     local choice
