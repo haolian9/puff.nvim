@@ -47,7 +47,7 @@ local function create_buf(spec)
   local bufnr = Ephemeral({ namepat = "puff://menu/{bufnr}", handyclose = true }, lines)
 
   do
-    local choice
+    local index
 
     local bm = bufmap.wraps(bufnr)
     for key in spec.key_pool:iter() do
@@ -55,7 +55,7 @@ local function create_buf(spec)
         local n = assert(spec.key_pool:index(key), "unreachable: invalid key")
         -- not a present entry, do nothing
         if n > buflines.count(bufnr) then return jelly.info("no such option: %s", key) end
-        choice = n
+        index = n
         ni.win_close(0, false)
       end)
     end
@@ -66,8 +66,9 @@ local function create_buf(spec)
       buffer = bufnr,
       once = true,
       callback = function()
+        local choice = spec.entries[index]
         vim.schedule(function() -- to avoid 'Vim:E1159: Cannot split a window when closing the buffer'
-          spec.on_decide(spec.entries[choice], choice)
+          spec.on_decide(choice, choice ~= nil and index or nil)
         end)
       end,
     })
