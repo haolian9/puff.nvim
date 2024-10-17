@@ -1,12 +1,12 @@
 local M = {}
 
-local KeyPool = require("puff.KeyPool")
-local Menu = require("puff.Menu")
+local MenuImpl = require("puff.ColorfulMenu")
+local Keyring = require("puff.Keyring")
 
 M.input = require("puff.input")
 
 do
-  local key_pool = KeyPool("asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm" .. "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM")
+  local key_pool = Keyring("asdfjkl" .. "gh" .. "wertyuiop" .. "zxcvbnm" .. "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM")
   local function default_entfmt(ent) return ent end
 
   ---keep the same signature as vim.ui.select
@@ -24,7 +24,7 @@ do
       entfmt = opts.format_item or default_entfmt
     end
 
-    Menu({
+    MenuImpl({
       key_pool = key_pool,
       subject = opts.prompt,
       desc = nil,
@@ -36,14 +36,14 @@ do
 end
 
 do
-  local key_pool = KeyPool("yn")
+  local key_pool = Keyring("yn")
   local entries = { "go ahead", "wait, no" }
   local function entfmt(ent) return ent end
 
   ---@param opts {subject?:string, desc?:string[], entries?:[string,string]}
   ---@param on_decide fun(confirmed:boolean)
   function M.confirm(opts, on_decide)
-    Menu({
+    MenuImpl({
       key_pool = key_pool,
       subject = opts.subject,
       desc = opts.desc,

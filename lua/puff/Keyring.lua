@@ -1,22 +1,19 @@
 local itertools = require("infra.itertools")
 
----@class puff.KeyPool
----@field private list string[]
+---@class puff.Keyring
+---@field list string[]
 ---@field private dict {[string]: integer}
-local KeyPool = {}
+local Keyring = {}
 do
-  KeyPool.__index = KeyPool
+  Keyring.__index = Keyring
 
   ---@param key string
   ---@return integer?
-  function KeyPool:index(key) return self.dict[key] end
-
-  ---@return fun(): string?
-  function KeyPool:iter() return itertools.iter(self.list) end
+  function Keyring:index(key) return self.dict[key] end
 end
 
 ---@param keys string @printable ascii key string
----@return puff.KeyPool
+---@return puff.Keyring
 return function(keys)
   local list = {}
   local dict = {}
@@ -29,5 +26,5 @@ return function(keys)
     assert(not itertools.contains(list, "q"), "q is reserved for quit")
   end
 
-  return setmetatable({ list = list, dict = dict }, KeyPool)
+  return setmetatable({ list = list, dict = dict }, Keyring)
 end
