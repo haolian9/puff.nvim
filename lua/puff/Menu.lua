@@ -11,6 +11,7 @@
 
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
+local highlighter = require("infra.highlighter")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
@@ -27,6 +28,20 @@ local wincursor = require("infra.wincursor")
 ---@field entries string[]
 ---@field entfmt fun(entry:string):string
 ---@field on_decide fun(entry:string?,index:number?) @index: 1-based
+---@field colorful? boolean
+
+do
+  local hi = highlighter(0)
+
+  hi("PuffMenuTitle", { bold = true })
+  hi("PuffMenuDesc", {})
+
+  if vim.go.background == "light" then
+    hi("PuffMenuOption", { fg = 27, bold = true })
+  else
+    hi("PuffMenuOption", { fg = 33, bold = true })
+  end
+end
 
 ---@param spec puff.Menu.Spec
 ---@return integer bufnr
@@ -45,6 +60,24 @@ local function create_buf(spec)
     end
 
     bufnr = Ephemeral({ namepat = "puff://menu/{bufnr}", handyclose = true }, lines)
+  end
+
+  if spec.colorful then
+    local offset = 0
+    if spec.subject ~= nil then
+      ni.buf_add_highlight(bufnr, 0, "PuffMenuTitle", 0, 0, -1)
+      offset = 1
+    end
+    if spec.desc ~= nil then
+      for lnum = offset, #spec.desc + offset do
+        ni.buf_add_highlight(bufnr, 0, "PuffMenuDesc", lnum, 0, -1)
+      end
+      offset = offset + #spec.desc
+    end
+    for lnum = offset, #spec.entries + offset do
+      local start_col, stop_col = 1, 2 -- ' %s.'
+      ni.buf_add_highlight(bufnr, 0, "PuffMenuOption", lnum, start_col, stop_col)
+    end
   end
 
   do

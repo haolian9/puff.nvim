@@ -1,7 +1,7 @@
 local M = {}
 
-local MenuImpl = require("puff.ColorfulMenu")
 local Keyring = require("puff.Keyring")
+local Menu = require("puff.Menu")
 
 M.input = require("puff.input")
 
@@ -24,13 +24,14 @@ do
       entfmt = opts.format_item or default_entfmt
     end
 
-    MenuImpl({
+    Menu({
       key_pool = key_pool,
       subject = opts.prompt,
       desc = nil,
       entries = items,
       entfmt = entfmt,
       on_decide = on_choice,
+      colorful = true,
     })
   end
 end
@@ -43,13 +44,14 @@ do
   ---@param opts {subject?:string, desc?:string[], entries?:[string,string]}
   ---@param on_decide fun(confirmed:boolean)
   function M.confirm(opts, on_decide)
-    MenuImpl({
+    Menu({
       key_pool = key_pool,
       subject = opts.subject,
       desc = opts.desc,
       entries = opts.entries or entries,
       entfmt = entfmt,
       on_decide = function(_, index) on_decide(index == 1) end,
+      colorful = true,
     })
   end
 end
