@@ -1,10 +1,10 @@
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
-local ex = require("infra.ex")
 local feedkeys = require("infra.feedkeys")
 local jelly = require("infra.jellyfish")("puff.input", "info")
 local bufmap = require("infra.keymap.buffer")
 local LRU = require("infra.LRU")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
@@ -32,7 +32,7 @@ end
 local function make_closewin_rhs(input, stop_insert)
   return function()
     if input ~= nil then input:collect() end
-    if stop_insert then ex("stopinsert") end
+    if stop_insert then mi.stopinsert() end
     ni.win_close(0, false)
   end
 end
@@ -71,7 +71,7 @@ return function(opts, on_complete)
     if opts.icon then
       local ns = ni.create_namespace("puff:input")
       ni.buf_set_extmark(bufnr, ns, 0, 0, {
-        virt_text = { { opts.icon, "Normal" } },
+        virt_text = { { opts.icon, "Normal" }, { " " } },
         virt_text_pos = "inline",
         right_gravity = false,
       })
