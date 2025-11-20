@@ -112,7 +112,7 @@ return function(opts, on_complete)
       bm.n("o", rhs)
       bm.n("O", rhs)
       bm.n("yy", rhs)
-      --todo: yyp
+      --concern: yyp
     end
   end
 
