@@ -11,6 +11,7 @@ local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local iuv = require("infra.iuv")
 local jelly = require("infra.jellyfish")("puff.alert", "info")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
@@ -66,7 +67,7 @@ return function(summary, body, icon, urgency, timeout)
     if icon ~= nil then --
       ni.buf_set_extmark(bufnr, xmark_ns, lnum, 0, { virt_text = { { icon } }, virt_text_pos = "inline", right_gravity = false })
     end
-    ni.buf_add_highlight(bufnr, xmark_ns, "JellySource", lnum, 0, -1)
+    mi.buf_highlight_line(bufnr, xmark_ns, lnum, "JellySource")
   end
 
   do --body lines
@@ -77,7 +78,7 @@ return function(summary, body, icon, urgency, timeout)
     buflines.appends(bufnr, high, body)
 
     for i = 1, #body do
-      ni.buf_add_highlight(bufnr, xmark_ns, hi, high + i, 0, -1)
+      mi.buf_highlight_line(bufnr, xmark_ns, high + i, hi)
     end
   end
 

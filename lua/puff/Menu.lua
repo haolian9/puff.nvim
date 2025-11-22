@@ -16,6 +16,7 @@ local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("puff.Menu")
 local bufmap = require("infra.keymap.buffer")
 local listlib = require("infra.listlib")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local unsafe = require("infra.unsafe")
@@ -29,6 +30,8 @@ local wincursor = require("infra.wincursor")
 ---@field entfmt fun(entry:string):string
 ---@field on_decide fun(entry:string?,index:number?) @index: 1-based
 ---@field colorful? boolean
+
+local xmark_ns = ni.create_namespace("puff.menu.xmark")
 
 do
   local hi = highlighter(0)
@@ -65,18 +68,18 @@ local function create_buf(spec)
   if spec.colorful then
     local offset = 0
     if spec.subject ~= nil then
-      ni.buf_add_highlight(bufnr, 0, "PuffMenuTitle", 0, 0, -1)
-      offset = 1
+      mi.buf_highlight_line(bufnr, xmark_ns, 0, "PuffMenuTitle")
+      offset = offset + 1
     end
     if spec.desc ~= nil then
       for lnum = offset, #spec.desc + offset do
-        ni.buf_add_highlight(bufnr, 0, "PuffMenuDesc", lnum, 0, -1)
+        mi.buf_highlight_line(bufnr, xmark_ns, lnum, "PuffMenuDesc")
       end
       offset = offset + #spec.desc
     end
-    for lnum = offset, #spec.entries + offset do
-      local start_col, stop_col = 1, 2 -- ' %s.'
-      ni.buf_add_highlight(bufnr, 0, "PuffMenuOption", lnum, start_col, stop_col)
+    for lnum = offset, offset + #spec.entries - 1 do
+      local start, stop = 1, 2 -- ' %s.'
+      ni.buf_set_extmark(bufnr, xmark_ns, lnum, start, { end_row = lnum, end_col = stop, hl_group = "PuffMenuOption" })
     end
   end
 
