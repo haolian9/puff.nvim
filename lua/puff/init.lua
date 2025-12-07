@@ -10,6 +10,7 @@ do
   local function default_entfmt(ent) return ent end
 
   ---keep the same signature as vim.ui.select
+  ---user should check if entry and index are nil in on_choice()
   ---@param items any[]
   ---@param opts {prompt?:string, format_item?:(fun(item):string), kind?:string}
   ---@param on_choice fun(entry?:string, index?:number) @index: 1-based
